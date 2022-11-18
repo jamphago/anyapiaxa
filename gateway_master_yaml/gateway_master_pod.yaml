@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-master
+  labels:
+    app: gateway-master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway-master
+  template:
+    metadata:
+      labels:
+        app: gateway-master
+    spec:
+      containers:
+      - name: gateway-master
+        image: "192.168.103.52:5000/anyapi-master:cloud2"
+        imagePullPolicy: Always
+        command: ['sh', '-c', 'sleep 6000000']

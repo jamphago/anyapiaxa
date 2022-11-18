@@ -1,0 +1,36 @@
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gateway-sc
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: Immediate
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: gateway-pv
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteMany
+  storageClassName: gateway-sc
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /var/log/gwlog
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: gateway-pvc
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+   requests:
+    storage: 5Gi
+  storageClassName: gateway-sc
+
+

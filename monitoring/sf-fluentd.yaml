@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: sfmonitoring-fluentd
+  labels:
+    k8s-app: sfmonitoring-fluentd
+    version: v1
+spec:
+  selector:
+    matchLabels:
+      k8s-app: sfmonitoring-fluentd
+      version: v1
+  template:
+    metadata:
+      labels:
+        k8s-app: sfmonitoring-fluentd
+        version: v1
+    spec:
+      containers:
+      - name: sfmonitoring-fluentd
+        image: 192.168.103.52:5000/sfmonitoring-fluentd:21.0.0.0
+        env:
+          - name: NODENAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name: ANYAPI_TRACE_LOG_PATH
+            value: "/log/$(NODENAME)/*"
+          - name:  FLUENT_ELASTICSEARCH_HOST
+ #           value: "elasticsearch-master.$(NAMESPACE).svc.cluster.local"
+            value: 192.168.103.52
+          - name:  FLUENT_ELASTICSEARCH_PORT
+            value: "9200"
+          - name: FLUENT_ELASTICSEARCH_SCHEME
+            value: "http"
+          - name: FLUENT_UID
+            value: "0"
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        volumeMounts:
+        - name: gwtrace
+          mountPath: /log
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: gwtrace
+          persistentVolumeClaim:
+            claimName: gateway-pvc

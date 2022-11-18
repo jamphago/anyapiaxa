@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sf-monitoring
+  namespace: "sf21"
+spec:
+  selector:
+    matchLabels:
+      app: sf-monitoring
+  template:
+    metadata:
+      labels:
+        app: sf-monitoring
+    spec:
+      containers:
+        - name: sf-monitoring
+          # image path
+          image: 192.168.103.52:5000/sf-monitoring-backend:0.1
+          resources:
+            # limits:
+            #   memory: "4Gi"
+            #   cpu: "100m"
+            requests:
+              memory: "4Gi"
+              cpu: "1000m"
+          env:
+            - name: SW_STORAGE_ES_CLUSTER_NODES
+              # elasticsearch master host with port
+              value: "elasticsearch-master.sf21.svc.cluster.local:9200"
+              # JVM options
+            - name: JAVA_OPTS
+              value: "-Xms2G"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sf-monitoring-ui
+  namespace: "sf21"
+spec:
+  selector:
+    matchLabels:
+      app: sf-monitoring-ui
+  template:
+    metadata:
+      labels:
+        app: sf-monitoring-ui
+    spec:
+      containers:
+        - name: sf-monitoring-ui
+          image: 192.168.103.52:5000/sf-monitoring-ui:0.2
+          resources:
+            # limits:
+            #   memory: "1Gi"
+            #   cpu: "100m"
+            requests:
+              memory: "1Gi"
+              cpu: "1000m"
+          env:
+            - name: SW_OAP_ADDRESS
+              value: "http://sf-monitoring-service.sf21.svc.cluster.local:12800"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sf-monitoring-ui-service
+  namespace: "sf21"
+spec:
+  type: NodePort
+  selector:
+    app: sf-monitoring-ui
+  ports:
+    - port: 8080
+      name: ui
+      targetPort: 8080
+      protocol: TCP
+      nodePort: 32000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sf-monitoring-service
+  namespace: "sf21"
+spec:
+  selector:
+    app: sf-monitoring
+  ports:
+    - port: 11800
+      targetPort: 11800
+      name: grpc
+      protocol: TCP
+    - port: 12800
+      name: rest
+      targetPort: 12800
+      protocol: TCP

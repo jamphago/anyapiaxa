@@ -1,0 +1,130 @@
+{
+    "gatewayConfig": {
+        "gatewayGroupId": "${GROUP_ID}",
+        "id": "${ID}",
+        "name": "${ID}",
+        "protocol": "HTTP"
+    },
+    "static_resources": {
+        "endpoints": [{
+                "endpoint": {
+                    "physicalName": "poClientEndpoint",                    
+                    "protocol": "HTTP",
+                    "direction": "OUTBOUND",
+                    "bootState": "RUNNING",
+                    "connectType": "CLIENT",
+                    "httpUrl": {
+                        "split": true,
+                        "scheme": "http",
+                        "host": "${IP}",
+                        "port": "${PORT}"
+                    }
+                }
+            },
+            {
+                "endpoint": {
+                    "physicalName": "poServerEndpoint",
+                    "protocol": "HTTP",
+                    "bootState": "RUNNING",
+                    "connectionPool": {
+                     "max": "-1"
+                    },
+                    "httpUrl": {
+                     "scheme": "http",
+                     "host": "${LOCAL_IP}",
+                     "port": "${LOCAL_PORT}"
+                    },
+                    "rulesetId": "anylink.system.SystemServiceRuleSet"
+                }
+            },
+            {
+                "endpoint": {
+                    "physicalName": "httpEndpoint",
+                    "protocol": "HTTP",
+                    "direction": "Inbound",
+                    "bootState": "Running",
+                    "connectType": "Server",
+                    "connection_pool": {
+                        "max": "-1"
+                    },
+                    "httpUrl": {
+                        "scheme": "http",
+                        "port": "80"
+                    },
+                    "rulesetId": "ApiApplication.ApiServiceGroup.ApiDefaultRuleChain",
+                    "errorRulesetId": "anylink.system.ApiGatewayErrorRuleSet"
+                }
+            },
+            {
+                "endpoint": {
+                    "physicalName": "httpsEndpoint",
+                    "protocol": "HTTP",
+                    "direction": "Inbound",
+                    "bootState": "Running",
+                    "connectType": "Server",
+                    "connection_pool": {
+                        "max": "-1"
+                    },
+                    "useSsl": true,
+                    "ssl": {
+                        "keystore": {
+                            "storeType": "PEM",
+                            "storeLocation": "${SSL_STORE}"
+                        }
+                    },
+                    "httpUrl": {
+                        "scheme": "http",
+                        "port": "443"
+                    },
+                    "rulesetId": "ApiApplication.ApiServiceGroup.ApiDefaultRuleChain",
+                    "errorRulesetId": "anylink.system.ApiGatewayErrorRuleSet"
+                }
+            }
+        ],
+        "applications": [],
+        "rules": [
+            {
+                "name": "anylink.system.HFMRegistRule",
+                "config": {
+                    "client_endpoint_name": "poClientEndpoint",
+                    "service_name": "/apigateway-master/gateway",
+                    "server_endpoint_name": "poServerEndpoint"
+                }
+            }
+        ]
+    },
+    "loggerSystems": [{
+        "path": "anylink",
+        "level": "${LOG_LEVEL}",
+        "rotatetype": "TIMEBASE",
+        "rotateparam": "daily"
+    }],
+    "monitoring": {
+        "trace": {
+            "enable":"true",
+            "option":{
+                "file_enable":"true",
+                "fileName":"${HOSTNAME}_trace_log",
+                "path":"/home/gateway/gateway21/trace/${NODENAME}",
+                "rotate_param":"10 M",
+                "rotate_file_num":"10",
+                "endpoint":["sf-monitoring-service:11800"],
+                "include_body":"false",
+            },
+            "filter":{
+                "enable":"false",
+                "filters":[{ "name": "ResponseErrorFilter",
+                             "param": "none"},
+                         ],
+            }
+        },
+        "stat": {
+            "enable":"true",
+            "option":{
+                 "endpoint":["sf-monitoring-service:11800"],
+                 "histogram_explicit_bounds":["0", "10000"],
+                 "interval":"5000"
+            }
+        },
+    }
+}

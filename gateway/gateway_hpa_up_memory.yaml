@@ -1,0 +1,27 @@
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: gateway-test-up-memory
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: gateway-test
+  minReplicas: 1
+  maxReplicas: 10
+  behavior:
+    scaleDown:
+      selectPolicy: Disabled
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 30
+  metrics:
+  - type: Resource 
+    resource:
+      name: memory
+      target: 
+        type: AverageValue
+        averageValue: 500Mi

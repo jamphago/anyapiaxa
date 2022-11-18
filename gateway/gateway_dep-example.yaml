@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-test
+  labels:
+    app: gateway-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway-test
+  template:
+    metadata:
+      labels:
+        app: gateway-test
+      annotations:
+        prometheus.io/scrape: "true"
+    spec:
+      containers:
+      - name: gateway-test
+        image: 192.168.103.52:5000/anylink_gateway:21.0.141
+        imagePullPolicy: Always
+        command: [ './samples/entrypoint.sh', '-pn', '$(PROCESS_NUM)', '-i', '$(MS_IP)', '-li', 'localhost', '-lp', '30033', '-p', '$(MS_PORT)', '-a', '-g', 'apigw-group' ]
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+          #limits:
+          # cpu: "200m"
+          # memory: "512Mi"
+        env:
+        - name: GATEWAY_MALLOC_TRIM
+          value: "60000"
+        - name: MS_IP
+          value: "gateway-master-service"
+        - name: MS_PORT
+          value: "8088"
+        - name: NODENAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: PODNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: GATEWAY_LOG_HOME
+          value: "/home/gateway/gateway21/logs/$(PODNAME)"
+        - name: PROCESS_NUM
+          value: "3"
+        ports:
+        - containerPort: 9899
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /gateway/state
+            port: 30033
+        volumeMounts:
+          - mountPath: /home/gateway/gateway21/samples/defaultApiGateway21
+            subPath: defaultApiGateway21
+            name: gwconfig
+          - mountPath: /home/gateway/gateway21/ssl/cert.pem
+            subPath: cert.pem
+            name: gwcert
+          - mountPath: /home/gateway/gateway21/trace
+            name: gwtrace
+          - mountPath: /home/gateway/gateway21/logs
+            name: gwlog
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - /bin/sh
+              - -c
+              - |
+                curl -X DELETE -H "Content-Type: application/json" ${MS_IP}:${MS_PORT}/apigateway-master/apigws -d "{\"apigwListDTO\":[{\"gw_id\":\"ApiGateway_${HOSTNAME}\",\"gw_group_id\":\"apigw-group\"}]}";
+                i=2;
+                while [ $i -le ${PROCESS_NUM} ];
+                do
+                  curl -X DELETE -H "Content-Type: application/json" ${MS_IP}:${MS_PORT}/apigateway-master/apigws -d "{\"apigwListDTO\":[{\"gw_id\":\"ApiGateway_${HOSTNAME}_$i\",\"gw_group_id\":\"apigw-group\"}]}";
+                  i=$((i+1));
+                done
+      volumes:
+        - name: gwconfig
+          configMap:
+            name: gateway-config
+        - name: gwcert
+          configMap:
+            name: gateway-cert
+        - name: gwtrace
+          persistentVolumeClaim:
+            claimName: gateway-pvc
+        - name: gwlog
+          hostPath:
+            path: /root/gateway_log
